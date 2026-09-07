@@ -1,0 +1,54 @@
+# .github/workflows/terraform-plan.yml
+# PR 触发:风格门(fmt)→ init → plan,plan 全文贴进 PR 评论
+# 母版用途:整文件拷进仓库的 .github/workflows/terraform-plan.yml,只替换 <账号ID>
+name: terraform-plan
+
+on:
+  pull_request:
+  workflow_dispatch:        # 允许在 Actions 页手动触发(验收用)
+
+permissions:
+  id-token: write           # OIDC:允许 runner 产出身份令牌(换 AWS 临时凭证的前提)
+  contents: read            # 读仓库代码
+  pull-requests: write      # 往 PR 发 plan 评论
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: OIDC 换 AWS 临时凭证(无任何长期密钥)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::544340288157:role/lab-github-actions-role
+          aws-region: us-east-1
+
+      - name: 安装 Terraform(版本对齐本地 1.16.1)
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.1
+
+      - name: 风格门(terraform fmt -check)
+        run: terraform fmt -check -diff
+
+      - name: terraform init
+        run: terraform init -input=false
+
+      - name: terraform plan
+        run: terraform plan -no-color -input=false | tee plan.txt
+
+      - name: 把 plan 贴进 PR 评论
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let plan = fs.readFileSync('plan.txt', 'utf8');
+            if (plan.length > 60000) plan = plan.slice(0, 60000) + '\n...(过长截断)';
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '### 📋 Terraform Plan(自动生成,只读不改资源)\n```\n' + plan + '\n```'
+            });

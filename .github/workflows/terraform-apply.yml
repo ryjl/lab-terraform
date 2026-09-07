@@ -1,0 +1,42 @@
+# .github/workflows/terraform-apply.yml
+# merge 到 main 触发:先过环境保护审批门(environment: production),批准后才真正 apply
+# 所以 CI 里用 -auto-approve 是对的——人的批准已经上移到"门"上
+# 母版用途:整文件拷进仓库的 .github/workflows/terraform-apply.yml,只替换 <账号ID>
+name: terraform-apply
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: terraform-apply      # 同一时刻只允许一个 apply 在跑
+  cancel-in-progress: false   # 排队等待,不互相取消
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    environment: production   # ⛔ 审批门:Settings → Environments → production → Required reviewers
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: OIDC 换 AWS 临时凭证
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::544340288157:role/lab-github-actions-role
+          aws-region: us-east-1
+
+      - name: 安装 Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.1
+
+      - name: terraform init
+        run: terraform init -input=false
+
+      - name: terraform apply
+        run: terraform apply -auto-approve -input=false
