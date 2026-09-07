@@ -25,7 +25,7 @@ resource "aws_vpc" "main" {
   cidr_block           = "10.2.0.0/16"
   enable_dns_support   = true
   enable_dns_hostnames = true
-  tags = { Name = "lab-tf-vpc" }
+  tags                 = { Name = "lab-tf-vpc" }
 }
 
 resource "aws_subnet" "public" {
@@ -33,12 +33,12 @@ resource "aws_subnet" "public" {
   cidr_block              = "10.2.1.0/24"
   availability_zone       = "us-east-1a"
   map_public_ip_on_launch = true
-  tags = { Name = "lab-tf-subnet" }
+  tags                    = { Name = "lab-tf-subnet" }
 }
 
 resource "aws_internet_gateway" "gw" {
   vpc_id = aws_vpc.main.id
-  tags = { Name = "lab-tf-igw" }
+  tags   = { Name = "lab-tf-igw" }
 }
 
 resource "aws_route_table" "public" {
@@ -99,7 +99,7 @@ resource "aws_instance" "web" {
   subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.ssh.id]
   key_name               = var.key_name
-  tags = { Name = "lab-tf-ec2", Owner = "me" }
+  tags                   = { Name = "lab-tf-ec2", Owner = "ryjl" }
 }
 
 output "public_ip" {
