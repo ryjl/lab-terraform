@@ -99,7 +99,7 @@ resource "aws_instance" "web" {
   subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.ssh.id]
   key_name               = var.key_name
-  tags                   = { Name = "lab-tf-ec2", Owner = "ryjl" }
+  tags                   = { Name = "lab-tf-ec2", Owner = "v2" }
 }
 
 output "public_ip" {
